@@ -1,5 +1,11 @@
 import dotenv from 'dotenv';
-dotenv.config();
+
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config();
+    console.log('✅ Development mode - .env loaded');
+} else {
+    console.log('✅ Production mode - using platform environment variables');
+}
 
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
