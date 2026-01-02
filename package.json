@@ -5,11 +5,13 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.ts",
-    "build": "tsc",
+    "build": "pnpm run clean && tsc",
     "start": "node dist/server.js",
     "clean": "rimraf dist",
-    "start:prod": "npm run build && npm start",
-    "vercel-build": "echo 'Vercel build successful'"
+    "start:prod": "pnpm run build && pnpm start",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
     "node": "24.x"
