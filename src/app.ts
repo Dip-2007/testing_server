@@ -28,6 +28,7 @@ import adminRoutes from './routes/admin.routes';
 
 import connectDB from './config/db';
 import swaggerSpec from './config/swagger';
+import { cache } from './middleware/cache';
 
 const app: Application = express();
 
@@ -81,6 +82,34 @@ app.get('/favicon.ico', (req: Request, res: Response) => {
 
 app.get('/favicon.png', (req: Request, res: Response) => {
     res.status(204).end();
+});
+
+// ========= PUBLIC WELCOME ROUTE (public rate limited) ==========
+
+app.get('/', publicLimiter, cache({ EX: 30 }), (req: Request, res: Response): void => {
+    const devJoke = [
+        "Why do programmers prefer dark mode? Light attracts bugs! 🐛",
+        "There are 10 types of people: those who understand binary and those who don't",
+        "404: Humor not found... wait, there it is!"
+    ];
+
+    res.json({
+        welcome: {
+            message: 'Welcome to Xenia API',
+            tagline: 'Powering PICT\'s biggest tech event',
+            version: '1.0.0'
+        },
+        quick_start: {
+            health: 'GET /ping',
+        },
+        dev_humor: devJoke[Math.floor(Math.random() * devJoke.length)],
+        meta: {
+            timestamp: Date.now(),
+            cached: true,
+            cache_ttl: 30,
+            request_id: req.headers['x-request-id'] || 'N/A'
+        },
+    });
 });
 
 // ========== PUBLIC ROUTES (Only Secret Key) ==========
