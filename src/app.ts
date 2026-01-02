@@ -1,13 +1,19 @@
 import express, { Application, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 
 import { authenticate } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import morganMiddleware from './middleware/morganMiddleware';
+import { apiLimiter, publicLimiter } from './middleware/rateLimit';
+
+import publicRoutes from './routes/public.routes';
+import apiRoutes from './routes/api.routes';
 
 import connectDB from './config/db';
-import logger from './config/logger';
+import swaggerSpec from './config/swagger';
+
 
 dotenv.config();
 
@@ -21,12 +27,28 @@ app.use(morganMiddleware);
 
 connectDB();
 
-app.get('/ping', (req: Request, res: Response): void => {
-    logger.info('Health check endpoint called');
-    res.json({ message: 'Xenia API is running!' });
+app.get('/docs.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
 });
 
-app.use(authenticate);
+// Swagger UI
+app.use(
+    '/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+        customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: 'Xenia API Documentation',
+    })
+);
+
+// ========== UNPROTECTED ROUTES (PUBLIC) ==========
+
+app.use('/', publicLimiter, publicRoutes);
+
+// ========== PROTECTED ROUTES (REQUIRE SECRET KEY) ==========
+
+app.use('/api', apiLimiter, authenticate, apiRoutes);
 
 app.use(errorHandler);
 
