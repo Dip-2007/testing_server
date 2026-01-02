@@ -1,3 +1,7 @@
+import express, { Application, Request, Response } from 'express';
+import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+
 import dotenv from 'dotenv';
 
 if (process.env.NODE_ENV !== 'production') {
@@ -6,10 +10,6 @@ if (process.env.NODE_ENV !== 'production') {
 } else {
     console.log('✅ Production mode - using platform environment variables');
 }
-
-import express, { Application, Request, Response } from 'express';
-import cors from 'cors';
-import swaggerUi from 'swagger-ui-express';
 
 import { authenticate } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
@@ -47,6 +47,14 @@ app.use(
     })
 );
 
+app.get('/favicon.ico', (req: Request, res: Response) => {
+    res.status(204).end();
+});
+
+app.get('/favicon.png', (req: Request, res: Response) => {
+    res.status(204).end();
+});
+
 // ========== UNPROTECTED ROUTES (PUBLIC) ==========
 
 app.use('/', publicLimiter, publicRoutes);
@@ -54,6 +62,15 @@ app.use('/', publicLimiter, publicRoutes);
 // ========== PROTECTED ROUTES (REQUIRE SECRET KEY) ==========
 
 app.use('/api', apiLimiter, authenticate, apiRoutes);
+
+app.use('*', (req: Request, res: Response) => {
+    res.status(404).json({
+        success: false,
+        error: 'Route not found',
+        path: req.originalUrl,
+        method: req.method,
+    });
+});
 
 app.use(errorHandler);
 
