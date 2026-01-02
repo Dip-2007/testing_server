@@ -10,7 +10,8 @@ const colors = {
 
 winston.addColors(colors);
 
-const format = winston.format.combine(
+// Different formats for dev vs production
+const devFormat = winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.colorize({ all: true }),
     winston.format.printf(
@@ -18,18 +19,31 @@ const format = winston.format.combine(
     )
 );
 
-const transports = [
+const prodFormat = winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+);
+
+const transports: winston.transport[] = [
     new winston.transports.Console(),
-    new winston.transports.File({
-        filename: 'logs/error.log',
-        level: 'error',
-    }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
 ];
+
+// Add file transports only in development
+if (process.env.NODE_ENV !== 'production') {
+    transports.push(
+        new winston.transports.File({
+            filename: 'logs/error.log',
+            level: 'error',
+        }),
+        new winston.transports.File({
+            filename: 'logs/combined.log'
+        })
+    );
+}
 
 const logger = winston.createLogger({
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-    format,
+    format: process.env.NODE_ENV === 'production' ? prodFormat : devFormat,
     transports,
 });
 
