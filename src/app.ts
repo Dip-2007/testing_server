@@ -63,7 +63,7 @@ app.use('/', publicLimiter, publicRoutes);
 
 app.use('/api', apiLimiter, authenticate, apiRoutes);
 
-app.use('*', (req: Request, res: Response) => {
+app.use((req: Request, res: Response) => {
     res.status(404).json({
         success: false,
         error: 'Route not found',
