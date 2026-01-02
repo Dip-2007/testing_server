@@ -1,19 +1,21 @@
+// src/models/User.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
     clerkId: string;
     email: string;
-    name: string;
-    mobile: string;
+    firstName: string;
+    lastName: string;
     college: string;
-    year: '1st' | '2nd' | '3rd' | '4th';
+    year: string;
     branch: string;
+    phoneNumber: string;
     isAdmin: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
 
-const userSchema = new Schema<IUser>(
+const userSchema: Schema = new Schema(
     {
         clerkId: {
             type: String,
@@ -26,46 +28,39 @@ const userSchema = new Schema<IUser>(
             required: true,
             unique: true,
             lowercase: true,
-            trim: true,
         },
-        name: {
+        firstName: {
             type: String,
             required: true,
-            trim: true,
         },
-        mobile: {
+        lastName: {
             type: String,
             required: true,
-            match: [/^\d{10}$/, 'Mobile number must be 10 digits'],
         },
         college: {
             type: String,
-            required: true,
-            trim: true,
+            default: '',
         },
         year: {
             type: String,
-            required: true,
-            enum: ['1st', '2nd', '3rd', '4th'],
+            default: '',
         },
         branch: {
             type: String,
-            required: true,
-            trim: true,
+            default: '',
+        },
+        phoneNumber: {
+            type: String,
+            default: '',
         },
         isAdmin: {
             type: Boolean,
             default: false,
-            index: true,
         },
     },
     {
         timestamps: true,
     }
 );
-
-// Indexes for faster queries
-userSchema.index({ email: 1 });
-userSchema.index({ clerkId: 1 });
 
 export default mongoose.model<IUser>('User', userSchema);

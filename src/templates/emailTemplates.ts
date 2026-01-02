@@ -1,40 +1,43 @@
+// src/templates/emailTemplates.ts
 import { IUser } from '../models/User';
-import { IEvent } from '../models/Event';
 
 interface OrderCreatedData {
-    user: IUser;
-    orderId: string;
-    events: Array<{
-        name: string;
-        fees: number;
-    }>;
-    totalAmount: number;
-    transactionId: string;
+  user: IUser;
+  orderId: string;
+  events: Array<{
+    name: string;
+    fees: number;
+  }>;
+  totalAmount: number;
+  transactionId: string;
 }
 
 interface OrderVerifiedData {
-    user: IUser;
-    orderId: string;
-    events: Array<{
-        name: string;
-        venue?: string;
-        eventDate?: Date;
-    }>;
+  user: IUser;
+  orderId: string;
+  events: Array<{
+    name: string;
+    venue?: string;
+    eventDate?: Date;
+  }>;
 }
 
 interface OrderRejectedData {
-    user: IUser;
-    orderId: string;
-    transactionId: string;
-    rejectionReason?: string;
+  user: IUser;
+  orderId: string;
+  transactionId: string;
+  rejectionReason?: string;
 }
 
 export const orderCreatedTemplate = (data: OrderCreatedData): string => {
-    const eventsList = data.events
-        .map((event) => `    • ${event.name} - ₹${event.fees}`)
-        .join('\n');
+  const eventsList = data.events
+    .map((event) => `    • ${event.name} - ₹${event.fees}`)
+    .join('\n');
 
-    return `
+  // Build full name from firstName and lastName
+  const userName = `${data.user.firstName} ${data.user.lastName}`.trim();
+
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -57,7 +60,7 @@ export const orderCreatedTemplate = (data: OrderCreatedData): string => {
       <p>Your registration is being processed</p>
     </div>
     <div class="content">
-      <p>Hi <strong>${data.user.name}</strong>,</p>
+      <p>Hi <strong>${userName}</strong>,</p>
       <p>Thank you for registering! Your order has been received and is awaiting payment verification.</p>
       
       <div class="order-box">
@@ -89,19 +92,22 @@ ${eventsList}
 };
 
 export const orderVerifiedTemplate = (data: OrderVerifiedData): string => {
-    const eventsList = data.events
-        .map((event) => {
-            const dateStr = event.eventDate
-                ? new Date(event.eventDate).toLocaleDateString('en-IN', {
-                    dateStyle: 'long',
-                })
-                : 'TBA';
-            const venueStr = event.venue ? ` | Venue: ${event.venue}` : '';
-            return `    • ${event.name}\n      📅 ${dateStr}${venueStr}`;
+  const eventsList = data.events
+    .map((event) => {
+      const dateStr = event.eventDate
+        ? new Date(event.eventDate).toLocaleDateString('en-IN', {
+          dateStyle: 'long',
         })
-        .join('\n\n');
+        : 'TBA';
+      const venueStr = event.venue ? ` | Venue: ${event.venue}` : '';
+      return `    • ${event.name}\n      📅 ${dateStr}${venueStr}`;
+    })
+    .join('\n\n');
 
-    return `
+  // Build full name from firstName and lastName
+  const userName = `${data.user.firstName} ${data.user.lastName}`.trim();
+
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -124,7 +130,7 @@ export const orderVerifiedTemplate = (data: OrderVerifiedData): string => {
       <p>You're all set for the events</p>
     </div>
     <div class="content">
-      <p>Hi <strong>${data.user.name}</strong>,</p>
+      <p>Hi <strong>${userName}</strong>,</p>
       <p>Great news! Your payment has been verified and your registration is confirmed. 🎉</p>
       
       <div class="success-box">
@@ -163,11 +169,14 @@ ${eventsList}
 };
 
 export const orderRejectedTemplate = (data: OrderRejectedData): string => {
-    const reasonText = data.rejectionReason
-        ? `<p><strong>Reason:</strong> ${data.rejectionReason}</p>`
-        : '';
+  const reasonText = data.rejectionReason
+    ? `<p><strong>Reason:</strong> ${data.rejectionReason}</p>`
+    : '';
 
-    return `
+  // Build full name from firstName and lastName
+  const userName = `${data.user.firstName} ${data.user.lastName}`.trim();
+
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -189,7 +198,7 @@ export const orderRejectedTemplate = (data: OrderRejectedData): string => {
       <p>Action Required</p>
     </div>
     <div class="content">
-      <p>Hi <strong>${data.user.name}</strong>,</p>
+      <p>Hi <strong>${userName}</strong>,</p>
       <p>We were unable to verify your payment for the following order:</p>
       
       <div class="error-box">

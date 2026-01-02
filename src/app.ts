@@ -1,6 +1,10 @@
+// src/app.ts
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
+
+import compression from 'compression';
+import helmet from 'helmet';
 
 import dotenv from 'dotenv';
 
@@ -11,33 +15,56 @@ if (process.env.NODE_ENV !== 'production') {
     console.log('✅ Production mode - using platform environment variables');
 }
 
-import { authenticate } from './middleware/auth';
+import clerkWebhook from './routes/webhooks/clerk.webhook';
+
+import { checkSecretKey, checkAuth, checkAdmin } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import morganMiddleware from './middleware/morganMiddleware';
 import { apiLimiter, publicLimiter } from './middleware/rateLimit';
 
 import publicRoutes from './routes/public.routes';
-import apiRoutes from './routes/api.routes';
+import userRoutes from './routes/user.routes';
+import adminRoutes from './routes/admin.routes';
 
 import connectDB from './config/db';
 import swaggerSpec from './config/swagger';
 
 const app: Application = express();
 
+// ========== SECURITY (Must be FIRST) ==========
+app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production',
+}));
+
+// ========== COMPRESSION ==========
+app.use(compression());
+
+// ========== CORS ==========
 app.use(cors());
+
+// ========== CLERK WEBHOOK (Must be BEFORE express.json()) ==========
+app.use(
+    '/webhooks/clerk',
+    express.raw({ type: 'application/json' }),
+    clerkWebhook
+);
+
+// ========== BODY PARSERS ==========
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ========== LOGGING ==========
 app.use(morganMiddleware);
 
+// ========== DATABASE ==========
 connectDB();
 
+// ========== SWAGGER DOCUMENTATION ==========
 app.get('/docs.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpec);
 });
 
-// Swagger UI
 app.use(
     '/docs',
     swaggerUi.serve,
@@ -47,6 +74,7 @@ app.use(
     })
 );
 
+// ========== FAVICON HANDLERS ==========
 app.get('/favicon.ico', (req: Request, res: Response) => {
     res.status(204).end();
 });
@@ -55,14 +83,16 @@ app.get('/favicon.png', (req: Request, res: Response) => {
     res.status(204).end();
 });
 
-// ========== UNPROTECTED ROUTES (PUBLIC) ==========
+// ========== PUBLIC ROUTES (Only Secret Key) ==========
+app.use('/', publicLimiter, checkSecretKey, publicRoutes);
 
-app.use('/', publicLimiter, publicRoutes);
+// ========== PROTECTED USER ROUTES (Secret Key + Clerk ID) ==========
+app.use('/api', apiLimiter, checkSecretKey, checkAuth, userRoutes);
 
-// ========== PROTECTED ROUTES (REQUIRE SECRET KEY) ==========
+// ========== PROTECTED ADMIN ROUTES (Secret Key + Clerk ID + Admin) ==========
+app.use('/api/admin', apiLimiter, checkSecretKey, checkAuth, checkAdmin, adminRoutes);
 
-app.use('/api', apiLimiter, authenticate, apiRoutes);
-
+// ========== 404 HANDLER ==========
 app.use((req: Request, res: Response) => {
     res.status(404).json({
         success: false,
@@ -72,6 +102,7 @@ app.use((req: Request, res: Response) => {
     });
 });
 
+// ========== ERROR HANDLER (Must be LAST) ==========
 app.use(errorHandler);
 
 export default app;
