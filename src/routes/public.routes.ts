@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import logger from '../config/logger';
 import { cache } from '../middleware/cache';
 import healthRoutes from './health/health.routes';
+import testRoutes from './test/test.routes';
 
 const router: Router = Router();
 
@@ -42,6 +43,8 @@ router.get('/', cache({ EX: 30 }), (req: Request, res: Response): void => {
     });
 });
 
+
 router.use('/', healthRoutes);
+router.use('/test', testRoutes)
 
 export default router;

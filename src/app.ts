@@ -1,5 +1,7 @@
-import express, { Application, Request, Response } from 'express';
 import dotenv from 'dotenv';
+dotenv.config();
+
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 
@@ -13,9 +15,6 @@ import apiRoutes from './routes/api.routes';
 
 import connectDB from './config/db';
 import swaggerSpec from './config/swagger';
-
-
-dotenv.config();
 
 const app: Application = express();
 
