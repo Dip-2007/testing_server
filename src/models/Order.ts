@@ -3,11 +3,13 @@ import mongoose, { Schema, Document } from 'mongoose';
 interface IRegistration {
     eventId: mongoose.Types.ObjectId;
     teamMembers: mongoose.Types.ObjectId[];
+    selectedDomain?: string;
+    selectedPS?: string;
 }
 
 export interface IOrder extends Document {
     orderId: string;
-    userId: mongoose.Types.ObjectId; // Team leader 
+    userId: mongoose.Types.ObjectId;
     registrations: IRegistration[];
     transactionId: string;
     totalAmount: number;
@@ -25,15 +27,32 @@ const registrationSchema = new Schema(
             ref: 'Event',
             required: true,
         },
-        teamMembers: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: 'User',
-                required: true,
-            },
-        ],
+        teamMembers: {
+            type: [
+                {
+                    type: Schema.Types.ObjectId,
+                    ref: 'User',
+                    required: true,
+                }
+            ],
+            validate: {
+                validator: function (v: mongoose.Types.ObjectId[]) {
+
+                    return v.length === new Set(v.map(id => id.toString())).size;
+                },
+                message: 'Duplicate team members not allowed'
+            }
+        },
+        selectedDomain: {
+            type: String,
+            trim: true,
+        },
+        selectedPS: {
+            type: String,
+            trim: true,
+        },
     },
-    { _id: false } // Don't create separate IDs for sub-documents
+    { _id: false }
 );
 
 const orderSchema = new Schema<IOrder>(
@@ -65,6 +84,7 @@ const orderSchema = new Schema<IOrder>(
             required: true,
             unique: true,
             index: true,
+            trim: true,
         },
         totalAmount: {
             type: Number,
@@ -78,23 +98,32 @@ const orderSchema = new Schema<IOrder>(
             default: 'PENDING',
             index: true,
         },
-        verifiedAt: {
-            type: Date,
-        },
-        rejectionReason: {
-            type: String,
-            trim: true,
-        },
+        verifiedAt: { type: Date },
+        rejectionReason: { type: String, trim: true },
     },
-    {
-        timestamps: true,
-    }
+    { timestamps: true }
 );
 
-// Compound indexes for efficient queries
+// Indexes
 orderSchema.index({ userId: 1, status: 1 });
 orderSchema.index({ 'registrations.eventId': 1 });
 orderSchema.index({ 'registrations.teamMembers': 1 });
+orderSchema.index({ createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: -1 });  // ✅ For admin dashboard
+
+// Validation: Team leader must be in team members
+orderSchema.pre('save', async function () {
+    for (const reg of this.registrations) {
+        const leaderInTeam = reg.teamMembers.some(
+            memberId => memberId.toString() === this.userId.toString()
+        );
+
+        if (!leaderInTeam) {
+            throw new Error('Team leader must be included in team members');
+        }
+    }
+
+});
 
 orderSchema.pre('save', async function () {
     if (!this.orderId) {
@@ -102,4 +131,5 @@ orderSchema.pre('save', async function () {
         this.orderId = `ORD${String(count + 1).padStart(6, '0')}`;
     }
 });
+
 export default mongoose.model<IOrder>('Order', orderSchema);

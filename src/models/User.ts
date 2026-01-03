@@ -1,4 +1,3 @@
-// src/models/User.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
@@ -28,18 +27,22 @@ const userSchema: Schema = new Schema(
             required: true,
             unique: true,
             lowercase: true,
+            index: true,
         },
         firstName: {
             type: String,
             required: true,
+            trim: true,
         },
         lastName: {
             type: String,
             required: true,
+            trim: true,
         },
         college: {
             type: String,
             default: '',
+            trim: true,
         },
         year: {
             type: String,
@@ -48,19 +51,30 @@ const userSchema: Schema = new Schema(
         branch: {
             type: String,
             default: '',
+            trim: true,
         },
         phoneNumber: {
             type: String,
             default: '',
+            validate: {  // ✅ Added phone validation
+                validator: function (v: string) {
+                    return !v || /^[0-9]{10}$/.test(v);
+                },
+                message: 'Phone number must be 10 digits'
+            }
         },
         isAdmin: {
             type: Boolean,
             default: false,
+            index: true,
         },
     },
     {
         timestamps: true,
     }
 );
+
+
+userSchema.index({ college: 1, year: 1 });
 
 export default mongoose.model<IUser>('User', userSchema);
