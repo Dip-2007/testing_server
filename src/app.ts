@@ -20,10 +20,10 @@ import clerkWebhook from './routes/webhooks/clerk.webhook';
 import { checkSecretKey, checkAuth, checkAdmin } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import morganMiddleware from './middleware/morganMiddleware';
-import { apiLimiter, publicLimiter } from './middleware/rateLimit';
+import { apiLimiter, publicLimiter, strictLimiter } from './middleware/rateLimit';
 
 import publicRoutes from './routes/public.routes';
-import userRoutes from './routes/user.routes';
+import apiRoutes from './routes/api.routes';
 import adminRoutes from './routes/admin.routes';
 
 import connectDB from './config/db';
@@ -116,10 +116,10 @@ app.get('/', publicLimiter, cache({ EX: 30 }), (req: Request, res: Response): vo
 app.use('/', publicLimiter, checkSecretKey, publicRoutes);
 
 // ========== PROTECTED USER ROUTES (Secret Key + Clerk ID) ==========
-app.use('/api', apiLimiter, checkSecretKey, checkAuth, userRoutes);
+app.use('/api', apiLimiter, checkSecretKey, checkAuth, apiRoutes);
 
 // ========== PROTECTED ADMIN ROUTES (Secret Key + Clerk ID + Admin) ==========
-app.use('/api/admin', apiLimiter, checkSecretKey, checkAuth, checkAdmin, adminRoutes);
+app.use('/api/admin', strictLimiter, checkSecretKey, checkAuth, checkAdmin, adminRoutes);
 
 // ========== 404 HANDLER ==========
 app.use((req: Request, res: Response) => {

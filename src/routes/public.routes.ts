@@ -1,8 +1,9 @@
-import { Router, Request, Response } from 'express';
+import e, { Router, Request, Response } from 'express';
 import logger from '../config/logger';
 import { cache } from '../middleware/cache';
 import healthRoutes from './health/health.routes';
 import testRoutes from './test/test.routes';
+import eventRoutes from './event/event.routes';
 
 const router: Router = Router();
 
@@ -22,5 +23,6 @@ const router: Router = Router();
 
 router.use('/', healthRoutes);
 router.use('/test', testRoutes)
+router.use('/event', eventRoutes);
 
 export default router;

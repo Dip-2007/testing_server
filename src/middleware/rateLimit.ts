@@ -9,7 +9,7 @@ const redis = getRedisClient();
 //  API limiter
 export const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
+    max: 2000,
     store: new RedisStore({
         // @ts-expect-error - Redis client type compatibility
         sendCommand: (...args: string[]) => redis.call(...args),
@@ -32,7 +32,7 @@ export const apiLimiter = rateLimit({
 // Strict limiter for sensitive operations
 export const strictLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: 400,
     store: new RedisStore({
         // @ts-expect-error - Redis client type compatibility
         sendCommand: (...args: string[]) => redis.call(...args),
@@ -43,7 +43,7 @@ export const strictLimiter = rateLimit({
 // Public endpoint limiter (more generous)
 export const publicLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 300,
+    max: 4000,
     store: new RedisStore({
         // @ts-expect-error - Redis client type compatibility
         sendCommand: (...args: string[]) => redis.call(...args),
