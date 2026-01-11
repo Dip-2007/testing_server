@@ -17,7 +17,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 import clerkWebhook from './routes/webhooks/clerk.webhook';
 
-import { checkSecretKey, checkAuth, checkAdmin } from './middleware/auth';
+import { checkAuth, checkAdmin } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import morganMiddleware from './middleware/morganMiddleware';
 import { apiLimiter, publicLimiter, strictLimiter } from './middleware/rateLimit';
@@ -113,13 +113,13 @@ app.get('/', publicLimiter, cache({ EX: 30 }), (req: Request, res: Response): vo
 });
 
 // ========== PUBLIC ROUTES (Only Secret Key) ==========
-app.use('/', publicLimiter, checkSecretKey, publicRoutes);
+app.use('/', publicLimiter, publicRoutes);
 
 // ========== PROTECTED USER ROUTES (Secret Key + Clerk ID) ==========
-app.use('/api', apiLimiter, checkSecretKey, checkAuth, apiRoutes);
+app.use('/api', apiLimiter, checkAuth, apiRoutes);
 
 // ========== PROTECTED ADMIN ROUTES (Secret Key + Clerk ID + Admin) ==========
-app.use('/api/admin', strictLimiter, checkSecretKey, checkAuth, checkAdmin, adminRoutes);
+app.use('/api/admin', strictLimiter, checkAuth, checkAdmin, adminRoutes);
 
 // ========== 404 HANDLER ==========
 app.use((req: Request, res: Response) => {

@@ -13,25 +13,6 @@ declare global {
 }
 
 /**
- * Middleware 1: Check Secret Key
- * Use on ALL routes
- */
-export const checkSecretKey = (
-    req: Request,
-    res: Response,
-    next: NextFunction
-): void => {
-    const secretKey = req.headers['x-secret-key'];
-
-    if (!secretKey || secretKey !== process.env.SECRET_KEY) {
-        res.status(401).json({ error: 'Unauthorized - Invalid secret key' });
-        return;
-    }
-
-    next();
-};
-
-/**
  * Middleware 2: Check Clerk ID + Attach User
  * Use on protected routes only
  */

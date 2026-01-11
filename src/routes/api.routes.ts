@@ -6,7 +6,7 @@ const router: Router = Router();
 
 // ✅ NO MIDDLEWARE NEEDED HERE
 // Auth is already applied in app.ts:
-// app.use('/api', checkSecretKey, checkAuth, userRoutes);
+// app.use('/api', checkAuth, userRoutes);
 
 router.use('/profile', profileRoutes)
 router.use('/order', orderRoutes)
