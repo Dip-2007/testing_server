@@ -26,7 +26,6 @@ export const getAllUsers = async (req: Request, res: Response) => {
         }
 
         const users = await User.find(query)
-            .select('-clerkId')
             .sort({ createdAt: -1 })
             .lean();
 
