@@ -112,14 +112,14 @@ app.get('/', publicLimiter, cache({ EX: 30 }), (req: Request, res: Response): vo
     });
 });
 
-// ========== PUBLIC ROUTES (Only Secret Key) ==========
+// ========== PUBLIC ROUTES ==========
 app.use('/', publicLimiter, publicRoutes);
 
-// ========== PROTECTED USER ROUTES (Secret Key + Clerk ID) ==========
-app.use('/api', apiLimiter, checkAuth, apiRoutes);
+// ========== PROTECTED USER ROUTES (Clerk ID) ==========
+app.use('/api', publicLimiter, checkAuth, apiRoutes);
 
-// ========== PROTECTED ADMIN ROUTES (Secret Key + Clerk ID + Admin) ==========
-app.use('/api/admin', strictLimiter, checkAuth, checkAdmin, adminRoutes);
+// ========== PROTECTED ADMIN ROUTES ( Clerk ID + Admin) ==========
+app.use('/api/admin', publicLimiter, checkAuth, checkAdmin, adminRoutes);
 
 // ========== 404 HANDLER ==========
 app.use((req: Request, res: Response) => {

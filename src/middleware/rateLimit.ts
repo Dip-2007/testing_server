@@ -43,7 +43,7 @@ export const strictLimiter = rateLimit({
 // Public endpoint limiter (more generous)
 export const publicLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 4000,
+    max: 10000,
     store: new RedisStore({
         // @ts-expect-error - Redis client type compatibility
         sendCommand: (...args: string[]) => redis.call(...args),
