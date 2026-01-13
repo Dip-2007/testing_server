@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import logger from '../config/logger';
 import profileRoutes from './profile/profile.route';
+import userRoutes from "./users/user.route"
 import orderRoutes from './order/order.route';
 const router: Router = Router();
 
@@ -10,5 +10,6 @@ const router: Router = Router();
 
 router.use('/profile', profileRoutes)
 router.use('/order', orderRoutes)
+router.use('/users', userRoutes);
 
 export default router;
