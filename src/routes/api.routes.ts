@@ -9,7 +9,7 @@ const router: Router = Router();
 // app.use('/api', checkAuth, userRoutes);
 
 router.use('/profile', profileRoutes)
-router.use('/order', orderRoutes)
+router.use('/orders', orderRoutes)
 router.use('/users', userRoutes);
 
 export default router;

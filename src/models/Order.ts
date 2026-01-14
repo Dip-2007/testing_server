@@ -37,7 +37,6 @@ const registrationSchema = new Schema(
             ],
             validate: {
                 validator: function (v: mongoose.Types.ObjectId[]) {
-
                     return v.length === new Set(v.map(id => id.toString())).size;
                 },
                 message: 'Duplicate team members not allowed'
@@ -59,7 +58,6 @@ const orderSchema = new Schema<IOrder>(
     {
         orderId: {
             type: String,
-            required: true,
             unique: true,
             index: true,
         },
@@ -109,27 +107,55 @@ orderSchema.index({ userId: 1, status: 1 });
 orderSchema.index({ 'registrations.eventId': 1 });
 orderSchema.index({ 'registrations.teamMembers': 1 });
 orderSchema.index({ createdAt: -1 });
-orderSchema.index({ status: 1, createdAt: -1 });  // ✅ For admin dashboard
+orderSchema.index({ status: 1, createdAt: -1 });
 
-// Validation: Team leader must be in team members
+// ✅ FIXED PRE-SAVE HOOK (Async without next())
 orderSchema.pre('save', async function () {
+    // 1️⃣ Generate orderId if not present
+    if (!this.orderId) {
+        const OrderModel = mongoose.model('Order');
+
+        // Find the last order sorted by createdAt (descending)
+        // ✅ Properly typed to include orderId
+        const lastOrder = await OrderModel.findOne(
+            { orderId: { $exists: true, $ne: null } },
+            { orderId: 1 }
+        )
+            .sort({ createdAt: -1 })
+            .lean<{ _id: mongoose.Types.ObjectId; orderId: string }>()  // ✅ Type assertion
+            .exec();
+
+        let orderNumber = 1;
+
+        if (lastOrder?.orderId) {
+            // Extract number from "ORD000001" format
+            const match = lastOrder.orderId.match(/ORD(\d+)/);
+            if (match) {
+                orderNumber = parseInt(match[1], 10) + 1;
+            }
+        }
+
+        // Generate new orderId with 6-digit padding
+        this.orderId = `ORD${orderNumber.toString().padStart(6, '0')}`;
+    }
+
+    // 2️⃣ Validate team leader is in all teams
     for (const reg of this.registrations) {
         const leaderInTeam = reg.teamMembers.some(
             memberId => memberId.toString() === this.userId.toString()
         );
 
         if (!leaderInTeam) {
-            throw new Error('Team leader must be included in team members');
+            throw new Error(
+                'You (team leader) must be included in the team members list for all events'
+            );
         }
     }
-
 });
 
-orderSchema.pre('save', async function () {
-    if (!this.orderId) {
-        const count = await mongoose.model('Order').countDocuments();
-        this.orderId = `ORD${String(count + 1).padStart(6, '0')}`;
-    }
+// ✅ POST-SAVE HOOK for logging (optional)
+orderSchema.post('save', function (doc) {
+    console.log(`✅ Order saved: ${doc.orderId}`);
 });
 
 export default mongoose.model<IOrder>('Order', orderSchema);

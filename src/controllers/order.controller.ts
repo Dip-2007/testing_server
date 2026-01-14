@@ -358,11 +358,26 @@ export const getOrderById = async (req: Request, res: Response) => {
 
         logger.info(`📋 User ${req.user.email} fetching order ${id}`);
 
-        const order: any = await Order.findOne({ orderId: id })
-            .populate('registrations.eventId', 'name category fees venue logo isActive')
-            .populate('registrations.teamMembers', 'firstName lastName email phoneNumber college year branch')
-            .populate('userId', 'firstName lastName email phoneNumber')
-            .lean();
+        // ✅ FIXED - Search by BOTH _id and orderId
+        let order: any;
+
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            // It's a MongoDB _id
+            order = await Order.findById(id)
+                .populate('registrations.eventId', 'name category fees venue logo isActive')
+                .populate('registrations.teamMembers', 'firstName lastName email phoneNumber college year branch')
+                .populate('userId', 'firstName lastName email phoneNumber')
+                .lean();
+        }
+
+        // If not found by _id, try by orderId (ORD000001 format)
+        if (!order) {
+            order = await Order.findOne({ orderId: id })
+                .populate('registrations.eventId', 'name category fees venue logo isActive')
+                .populate('registrations.teamMembers', 'firstName lastName email phoneNumber college year branch')
+                .populate('userId', 'firstName lastName email phoneNumber')
+                .lean();
+        }
 
         if (!order) {
             return res.status(404).json({
