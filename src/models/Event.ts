@@ -50,6 +50,7 @@ export interface IEvent extends Document {
         max: number;
     };
     logo?: string;
+    imgUrl?: string; // Event banner/poster image
     contact: string[];
     platform: IPlatform[];
     category: string;
@@ -152,6 +153,7 @@ const eventSchema = new Schema<IEvent>(
             max: { type: Number, required: true, default: 1, min: 1 },
         },
         logo: { type: String },
+        imgUrl: { type: String }, // Event banner/poster image
         contact: { type: [String], default: [] },
         platform: { type: [platformSchema], default: [] },
         category: {

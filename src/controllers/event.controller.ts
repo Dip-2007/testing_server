@@ -69,6 +69,7 @@ export const getAllEvents = async (req: Request, res: Response) => {
                 description: event.description,
                 fees: event.fees,
                 category: event.category,
+                imgUrl: event.imgUrl,
                 venue: event.venue,
                 logo: event.logo,
                 teamSize: event.teamSize,
@@ -126,6 +127,7 @@ export const getEventById = async (req: Request, res: Response) => {
                 venue: event.venue,
                 isActive: event.isActive,
                 isHackathon: event.isHackathon,
+                imgUrl: event.imgUrl,
                 // Include domain names only, not full PS details
                 domains: event.isHackathon
                     ? event.domains?.map((domain: any) => ({
