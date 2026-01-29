@@ -15,6 +15,11 @@ interface SendEmailResponse {
     error?: string;
 }
 
+interface EventLink {
+    name: string;
+    link: string;
+}
+
 /**
  * Send order created email
  */
@@ -55,12 +60,12 @@ export const sendOrderCreatedEmail = async (
 };
 
 /**
- * Send order verified email
+ * Send order verified email with event links (WhatsApp, Google Forms, etc.)
  */
 export const sendOrderVerifiedEmail = async (
     user: IUser,
     orderId: string,
-    events: Array<{ name: string; venue?: string; eventDate?: Date }>
+    events: Array<{ name: string; venue?: string; eventDate?: Date; links?: EventLink[] }>
 ): Promise<SendEmailResponse> => {
     try {
         const html = orderVerifiedTemplate({
@@ -72,7 +77,7 @@ export const sendOrderVerifiedEmail = async (
         const { data, error } = await resend.emails.send({
             from: FROM_EMAIL,
             to: user.email,
-            subject: `🎉 Payment Verified - You're Registered! | Xenia`,
+            subject: `Payment Verified - You're Registered! | Xenia`,
             html,
         });
 

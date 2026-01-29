@@ -1,6 +1,7 @@
 // src/controllers/admin/order.controller.ts
 import { Request, Response } from 'express';
 import Order from '../../models/Order';
+import Event from '../../models/Event';
 import logger from '../../config/logger';
 import { sendOrderVerifiedEmail, sendOrderRejectedEmail } from '../../services/emailService';
 import mongoose from 'mongoose';
@@ -136,7 +137,7 @@ export const verifyOrder = async (req: Request, res: Response) => {
                 { new: true, runValidators: false }  // ✅ Disable validators
             )
                 .populate('userId', 'firstName lastName email')
-                .populate('registrations.eventId', 'name venue');
+                .populate('registrations.eventId', '_id name venue');
         }
 
         if (!order) {
@@ -150,7 +151,7 @@ export const verifyOrder = async (req: Request, res: Response) => {
                 { new: true, runValidators: false }  // ✅ Disable validators
             )
                 .populate('userId', 'firstName lastName email')
-                .populate('registrations.eventId', 'name venue');
+                .populate('registrations.eventId', '_id name venue');
         }
 
         if (!order) {
@@ -169,12 +170,27 @@ export const verifyOrder = async (req: Request, res: Response) => {
 
         logger.info(`✅ Order verified: ${order.orderId} by admin ${req.user.email}`);
 
-        // ✅ Send email notification
+        // ✅ Send email notification with event links
         try {
-            const events = order.registrations.map((reg: any) => ({
-                name: reg.eventId.name,
-                venue: reg.eventId.venue,
-            }));
+            // Fetch full event details including links
+            const eventIds = order.registrations.map((reg: any) => reg.eventId._id);
+            const eventsWithLinks = await Event.find({ _id: { $in: eventIds } })
+                .select('name venue links')
+                .lean();
+
+            // Create a map for quick lookup
+            const eventMap = new Map(eventsWithLinks.map((e: any) => [e._id.toString(), e]));
+
+            const events = order.registrations.map((reg: any) => {
+                const eventId = reg.eventId._id.toString();
+                const fullEvent: any = eventMap.get(eventId);
+
+                return {
+                    name: reg.eventId.name,
+                    venue: reg.eventId.venue,
+                    links: fullEvent?.links || [],
+                };
+            });
 
             await sendOrderVerifiedEmail(order.userId, order.orderId, events);
         } catch (emailError: any) {
