@@ -30,9 +30,45 @@ export const getAllEvents = async (req: Request, res: Response) => {
         }
 
         const events = await Event.find(query)
-            .select('-domains.problemStatements.description') // Exclude detailed PS descriptions
             .sort({ createdAt: -1 })
             .lean();
+
+        // Helper function to map full event details
+        const mapFullEvent = (event: any) => ({
+            _id: event._id,
+            name: event.name,
+            description: event.description,
+            introduction: event.introduction,
+            prizes: event.prizes,
+            schedule: event.schedule,
+            rules: event.rules,
+            fees: event.fees,
+            teamSize: event.teamSize,
+            logo: event.logo,
+            imgUrl: event.imgUrl,
+            contact: event.contact,
+            platform: event.platform,
+            category: event.category,
+            venue: event.venue,
+            isActive: event.isActive,
+            isHackathon: event.isHackathon,
+            links: event.links || [],
+            domains: event.isHackathon
+                ? event.domains?.map((domain: any) => ({
+                    domainId: domain.domainId,
+                    name: domain.name,
+                    description: domain.description,
+                    problemStatements: domain.problemStatements?.map((ps: any) => ({
+                        psId: ps.psId,
+                        title: ps.title,
+                        description: ps.description,
+                        difficulty: ps.difficulty,
+                    })) || [],
+                }))
+                : [],
+            createdAt: event.createdAt,
+            updatedAt: event.updatedAt,
+        });
 
         // Group events by category
         const eventsByCategory: any = {};
@@ -40,19 +76,7 @@ export const getAllEvents = async (req: Request, res: Response) => {
             if (!eventsByCategory[event.category]) {
                 eventsByCategory[event.category] = [];
             }
-            eventsByCategory[event.category].push({
-                _id: event._id,
-                name: event.name,
-                description: event.description,
-                fees: event.fees,
-                category: event.category,
-                venue: event.venue,
-                logo: event.logo,
-                teamSize: event.teamSize,
-                isHackathon: event.isHackathon,
-                isActive: event.isActive,
-                createdAt: event.createdAt,
-            });
+            eventsByCategory[event.category].push(mapFullEvent(event));
         });
 
         // Get categories
@@ -63,21 +87,7 @@ export const getAllEvents = async (req: Request, res: Response) => {
             count: events.length,
             categories: categories,
             eventsByCategory: eventsByCategory,
-            events: events.map((event: any) => ({
-                _id: event._id,
-                name: event.name,
-                description: event.description,
-                fees: event.fees,
-                category: event.category,
-                imgUrl: event.imgUrl,
-                venue: event.venue,
-                logo: event.logo,
-                teamSize: event.teamSize,
-                isHackathon: event.isHackathon,
-                isActive: event.isActive,
-                contact: event.contact,
-                createdAt: event.createdAt,
-            })),
+            events: events.map(mapFullEvent),
         });
     } catch (error: any) {
         logger.error(`❌ Error fetching events: ${error.message}`);
@@ -128,13 +138,19 @@ export const getEventById = async (req: Request, res: Response) => {
                 isActive: event.isActive,
                 isHackathon: event.isHackathon,
                 imgUrl: event.imgUrl,
-                // Include domain names only, not full PS details
+                links: event.links || [], // External links (WhatsApp, Google Forms, etc.)
+                // Include domains with full problem statements for hackathons
                 domains: event.isHackathon
                     ? event.domains?.map((domain: any) => ({
                         domainId: domain.domainId,
                         name: domain.name,
                         description: domain.description,
-                        problemStatementsCount: domain.problemStatements?.length || 0,
+                        problemStatements: domain.problemStatements?.map((ps: any) => ({
+                            psId: ps.psId,
+                            title: ps.title,
+                            description: ps.description,
+                            difficulty: ps.difficulty,
+                        })) || [],
                     }))
                     : [],
                 createdAt: event.createdAt,
@@ -165,7 +181,6 @@ export const getEventsByCategory = async (req: Request, res: Response) => {
             category: category,
             isActive: true,
         })
-            .select('name description fees venue logo teamSize isHackathon contact')
             .sort({ createdAt: -1 })
             .lean();
 
@@ -180,7 +195,41 @@ export const getEventsByCategory = async (req: Request, res: Response) => {
             success: true,
             category: category,
             count: events.length,
-            events: events,
+            events: events.map((event: any) => ({
+                _id: event._id,
+                name: event.name,
+                description: event.description,
+                introduction: event.introduction,
+                prizes: event.prizes,
+                schedule: event.schedule,
+                rules: event.rules,
+                fees: event.fees,
+                teamSize: event.teamSize,
+                logo: event.logo,
+                imgUrl: event.imgUrl,
+                contact: event.contact,
+                platform: event.platform,
+                category: event.category,
+                venue: event.venue,
+                isActive: event.isActive,
+                isHackathon: event.isHackathon,
+                links: event.links || [],
+                domains: event.isHackathon
+                    ? event.domains?.map((domain: any) => ({
+                        domainId: domain.domainId,
+                        name: domain.name,
+                        description: domain.description,
+                        problemStatements: domain.problemStatements?.map((ps: any) => ({
+                            psId: ps.psId,
+                            title: ps.title,
+                            description: ps.description,
+                            difficulty: ps.difficulty,
+                        })) || [],
+                    }))
+                    : [],
+                createdAt: event.createdAt,
+                updatedAt: event.updatedAt,
+            })),
         });
     } catch (error: any) {
         logger.error(`❌ Error fetching events by category: ${error.message}`);
@@ -315,7 +364,6 @@ export const searchEvents = async (req: Request, res: Response) => {
                 { category: { $regex: q, $options: 'i' } },
             ],
         })
-            .select('name description fees category venue logo teamSize isHackathon')
             .limit(20)
             .lean();
 
@@ -323,7 +371,41 @@ export const searchEvents = async (req: Request, res: Response) => {
             success: true,
             query: q,
             count: events.length,
-            events: events,
+            events: events.map((event: any) => ({
+                _id: event._id,
+                name: event.name,
+                description: event.description,
+                introduction: event.introduction,
+                prizes: event.prizes,
+                schedule: event.schedule,
+                rules: event.rules,
+                fees: event.fees,
+                teamSize: event.teamSize,
+                logo: event.logo,
+                imgUrl: event.imgUrl,
+                contact: event.contact,
+                platform: event.platform,
+                category: event.category,
+                venue: event.venue,
+                isActive: event.isActive,
+                isHackathon: event.isHackathon,
+                links: event.links || [],
+                domains: event.isHackathon
+                    ? event.domains?.map((domain: any) => ({
+                        domainId: domain.domainId,
+                        name: domain.name,
+                        description: domain.description,
+                        problemStatements: domain.problemStatements?.map((ps: any) => ({
+                            psId: ps.psId,
+                            title: ps.title,
+                            description: ps.description,
+                            difficulty: ps.difficulty,
+                        })) || [],
+                    }))
+                    : [],
+                createdAt: event.createdAt,
+                updatedAt: event.updatedAt,
+            })),
         });
     } catch (error: any) {
         logger.error(`❌ Error searching events: ${error.message}`);
