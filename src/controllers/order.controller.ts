@@ -5,6 +5,7 @@ import Event from '../models/Event';
 import User from '../models/User';
 import logger from '../config/logger';
 import mongoose from 'mongoose';
+import { sendOrderCreatedEmail } from '../services/emailService';
 
 /**
  * @desc    Create new order (register for events)
@@ -204,8 +205,28 @@ export const createOrder = async (req: Request, res: Response) => {
 
         logger.info(`✅ Order created: ${order.orderId} by ${req.user.email}, Amount: ₹${totalAmount}`);
 
-        // TODO: Send email notification to user
-        // TODO: Send notification to admin
+        // Send order created email to user
+        try {
+            // Get event names for email
+            const eventIds = validatedRegistrations.map((reg) => reg.eventId);
+            const eventsForEmail = await Event.find({ _id: { $in: eventIds } }).select('name fees').lean();
+
+            const emailEvents = eventsForEmail.map((event: any) => ({
+                name: event.name,
+                fees: event.fees,
+            }));
+
+            await sendOrderCreatedEmail(
+                req.user,
+                order.orderId,
+                emailEvents,
+                totalAmount,
+                transactionId.trim()
+            );
+        } catch (emailError: any) {
+            logger.error(`❌ Failed to send order created email: ${emailError.message}`);
+            // Don't fail the request if email fails
+        }
 
         res.status(201).json({
             success: true,
