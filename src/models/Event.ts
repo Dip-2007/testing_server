@@ -27,7 +27,13 @@ interface IPlatform {
 interface IProblemStatement {
     psId: string;
     title: string;
-    description?: string;
+    description: string;
+    difficulty: 'Easy' | 'Medium' | 'Hard';
+}
+
+interface ILink {
+    name: string;
+    link: string;
 }
 
 interface IDomain {
@@ -56,8 +62,9 @@ export interface IEvent extends Document {
     category: string;
     venue?: string;
     isActive: boolean;
+    links?: ILink[]; // External links (WhatsApp, Google Forms, etc.)
 
-
+    // Hackathon specific
     isHackathon?: boolean;
     domains?: IDomain[];
 
@@ -129,6 +136,15 @@ const domainSchema = new Schema(
     { _id: false }
 );
 
+// ✅ NEW: Link Schema (for WhatsApp, Google Forms, etc.)
+const linkSchema = new Schema(
+    {
+        name: { type: String, required: true, trim: true },
+        link: { type: String, required: true },
+    },
+    { _id: false }
+);
+
 const eventSchema = new Schema<IEvent>(
     {
         name: {
@@ -163,7 +179,9 @@ const eventSchema = new Schema<IEvent>(
         },
         venue: { type: String, trim: true },
         isActive: { type: Boolean, default: true },
+        links: { type: [linkSchema], default: [] }, // External links (WhatsApp, Google Forms, etc.)
 
+        // Hackathon specific
         isHackathon: {
             type: Boolean,
             default: false,
