@@ -123,50 +123,44 @@ export const verifyOrder = async (req: Request, res: Response) => {
 
         logger.info(`👑 Admin ${req.user.email} verifying order: ${id}`);
 
-        // ✅ FIXED - Use findByIdAndUpdate to avoid validation issues
-        let order: any;
+        // ✅ First, find the order to check its current status
+        let existingOrder: any;
 
         if (mongoose.Types.ObjectId.isValid(id)) {
-            order = await Order.findByIdAndUpdate(
-                id,
-                {
-                    status: 'VERIFIED',
-                    verifiedAt: new Date(),
-                    $unset: { rejectionReason: 1 }
-                },
-                { new: true, runValidators: false }  // ✅ Disable validators
-            )
-                .populate('userId', 'firstName lastName email')
-                .populate('registrations.eventId', '_id name venue');
+            existingOrder = await Order.findById(id).lean();
         }
 
-        if (!order) {
-            order = await Order.findOneAndUpdate(
-                { orderId: id },
-                {
-                    status: 'VERIFIED',
-                    verifiedAt: new Date(),
-                    $unset: { rejectionReason: 1 }
-                },
-                { new: true, runValidators: false }  // ✅ Disable validators
-            )
-                .populate('userId', 'firstName lastName email')
-                .populate('registrations.eventId', '_id name venue');
+        if (!existingOrder) {
+            existingOrder = await Order.findOne({ orderId: id }).lean();
         }
 
-        if (!order) {
+        if (!existingOrder) {
             return res.status(404).json({
                 success: false,
                 error: 'Order not found',
             });
         }
 
-        if (order.status === 'VERIFIED' && order.verifiedAt) {
+        // ✅ Check if already verified BEFORE updating
+        if (existingOrder.status === 'VERIFIED') {
             return res.status(400).json({
                 success: false,
                 error: 'Order is already verified',
             });
         }
+
+        // ✅ Now update the order
+        const order: any = await Order.findByIdAndUpdate(
+            existingOrder._id,
+            {
+                status: 'VERIFIED',
+                verifiedAt: new Date(),
+                $unset: { rejectionReason: 1 }
+            },
+            { new: true, runValidators: false }
+        )
+            .populate('userId', 'firstName lastName email')
+            .populate('registrations.eventId', '_id name venue');
 
         logger.info(`✅ Order verified: ${order.orderId} by admin ${req.user.email}`);
 
@@ -235,48 +229,43 @@ export const rejectOrder = async (req: Request, res: Response) => {
 
         logger.info(`👑 Admin ${req.user.email} rejecting order: ${id}`);
 
-        // ✅ FIXED - Use findByIdAndUpdate to avoid validation issues
-        let order: any;
+        // ✅ First, find the order to check its current status
+        let existingOrder: any;
 
         if (mongoose.Types.ObjectId.isValid(id)) {
-            order = await Order.findByIdAndUpdate(
-                id,
-                {
-                    status: 'REJECTED',
-                    rejectionReason: reason.trim(),
-                    $unset: { verifiedAt: 1 }
-                },
-                { new: true, runValidators: false }  // ✅ Disable validators
-            )
-                .populate('userId', 'firstName lastName email');
+            existingOrder = await Order.findById(id).lean();
         }
 
-        if (!order) {
-            order = await Order.findOneAndUpdate(
-                { orderId: id },
-                {
-                    status: 'REJECTED',
-                    rejectionReason: reason.trim(),
-                    $unset: { verifiedAt: 1 }
-                },
-                { new: true, runValidators: false }  // ✅ Disable validators
-            )
-                .populate('userId', 'firstName lastName email');
+        if (!existingOrder) {
+            existingOrder = await Order.findOne({ orderId: id }).lean();
         }
 
-        if (!order) {
+        if (!existingOrder) {
             return res.status(404).json({
                 success: false,
                 error: 'Order not found',
             });
         }
 
-        if (order.status === 'VERIFIED') {
+        // ✅ Check if already verified BEFORE updating
+        if (existingOrder.status === 'VERIFIED') {
             return res.status(400).json({
                 success: false,
                 error: 'Cannot reject a verified order',
             });
         }
+
+        // ✅ Now update the order
+        const order: any = await Order.findByIdAndUpdate(
+            existingOrder._id,
+            {
+                status: 'REJECTED',
+                rejectionReason: reason.trim(),
+                $unset: { verifiedAt: 1 }
+            },
+            { new: true, runValidators: false }
+        )
+            .populate('userId', 'firstName lastName email');
 
         logger.info(`❌ Order rejected: ${order.orderId} by admin ${req.user.email}. Reason: ${reason}`);
 
