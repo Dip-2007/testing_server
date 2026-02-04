@@ -123,7 +123,40 @@ export const sendOrderRejectedEmail = async (
             return { success: false, error: error.message };
         }
 
-        logger.info(`✅ Order rejected email sent to ${user.email} - ID: ${data?.id}`);
+        return { success: true, messageId: data?.id };
+    } catch (error: any) {
+        logger.error(`❌ Email service error: ${error.message}`);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * Send order export email with Excel attachment
+ */
+export const sendOrderExportEmail = async (
+    email: string,
+    excelBuffer: Buffer
+): Promise<SendEmailResponse> => {
+    try {
+        const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: `Admin Order Export | Xenia`,
+            html: `<p>Hello Admin,</p><p>Please find attached the requested order export.</p><p>Regards,<br>Xenia Team</p>`,
+            attachments: [
+                {
+                    filename: `orders_export_${new Date().toISOString().split('T')[0]}.xlsx`,
+                    content: excelBuffer,
+                },
+            ],
+        });
+
+        if (error) {
+            logger.error(`❌ Failed to send order export email: ${error.message}`);
+            return { success: false, error: error.message };
+        }
+
+        logger.info(`✅ Order export email sent to ${email} - ID: ${data?.id}`);
         return { success: true, messageId: data?.id };
     } catch (error: any) {
         logger.error(`❌ Email service error: ${error.message}`);

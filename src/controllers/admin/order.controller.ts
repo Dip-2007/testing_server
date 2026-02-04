@@ -3,8 +3,9 @@ import { Request, Response } from 'express';
 import Order from '../../models/Order';
 import Event from '../../models/Event';
 import logger from '../../config/logger';
-import { sendOrderVerifiedEmail, sendOrderRejectedEmail } from '../../services/emailService';
+import { sendOrderVerifiedEmail, sendOrderRejectedEmail, sendOrderExportEmail } from '../../services/emailService';
 import mongoose from 'mongoose';
+import * as XLSX from 'xlsx';
 
 /**
  * @desc    Get all orders
@@ -296,6 +297,93 @@ export const rejectOrder = async (req: Request, res: Response) => {
         res.status(500).json({
             success: false,
             error: 'Failed to reject order',
+        });
+    }
+};
+
+/**
+ * @desc    Export filtered orders via email
+ * @route   POST /api/admin/orders/export-email
+ * @access  Admin
+ */
+export const exportOrdersViaEmail = async (req: Request, res: Response) => {
+    try {
+        // ✅ Explicit Admin Check (Redundant as middleware covers it, but requested by user)
+        if (!req.user?.isAdmin) {
+            return res.status(403).json({
+                success: false,
+                error: 'Forbidden - Admin access required',
+            });
+        }
+
+        const { status, eventId } = req.query;
+
+        logger.info(`👑 Admin ${req.user.email} requesting orders export`);
+
+        const query: any = {};
+
+        if (status) {
+            query.status = status;
+        }
+
+        if (eventId) {
+            query['registrations.eventId'] = eventId;
+        }
+
+        const orders: any[] = await Order.find(query)
+            .populate('userId', 'firstName lastName email phoneNumber college year branch')
+            .populate('registrations.eventId', 'name category fees')
+            .populate('registrations.teamMembers', 'firstName lastName email phoneNumber')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (orders.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'No orders found matching the criteria',
+            });
+        }
+
+        // Prepare data for Excel
+        const data = orders.map((order) => {
+            const eventNames = order.registrations
+                .map((reg: any) => reg.eventId?.name || 'Unknown')
+                .join(', ');
+
+            return {
+                'Order ID': order.orderId,
+                'Date': new Date(order.createdAt).toLocaleDateString(),
+                'Status': order.status,
+                'User Name': `${order.userId?.firstName || ''} ${order.userId?.lastName || ''}`,
+                'Email': order.userId?.email || '',
+                'Phone': order.userId?.phoneNumber || '',
+                'College': order.userId?.college || '',
+                'Events': eventNames,
+                'Total Amount': order.totalAmount,
+                'Payment ID': order.transactionId || 'N/A',
+            };
+        });
+
+        // Create workbook and worksheet
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Orders');
+
+        // Generate buffer
+        const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        // Send email
+        await sendOrderExportEmail(req.user.email, excelBuffer as Buffer);
+
+        res.json({
+            success: true,
+            message: `Export sent successfully to ${req.user.email}`,
+        });
+    } catch (error: any) {
+        logger.error(`❌ Error exporting orders: ${error.message}`);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to export orders',
         });
     }
 };

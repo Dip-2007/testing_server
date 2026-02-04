@@ -3,7 +3,8 @@ import {
     getAllOrders,
     getOrderById,
     verifyOrder,
-    rejectOrder
+    rejectOrder,
+    exportOrdersViaEmail
 } from '../../controllers/admin/order.controller';
 
 const router: Router = Router();
@@ -14,6 +15,13 @@ const router: Router = Router();
  * @access  Admin
  */
 router.get('/', getAllOrders);
+
+/**
+ * @route   POST /api/admin/orders/export-email
+ * @desc    Export filtered orders via email
+ * @access  Admin
+ */
+router.post('/export-email', exportOrdersViaEmail);
 
 /**
  * @route   GET /api/admin/orders/:id
