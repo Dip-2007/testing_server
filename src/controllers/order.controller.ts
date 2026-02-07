@@ -25,23 +25,8 @@ export const createOrder = async (req: Request, res: Response) => {
                 error: 'At least one event registration is required',
             });
         }
-
-        if (!transactionId || transactionId.trim() === '') {
-            return res.status(400).json({
-                success: false,
-                error: 'Transaction ID is required',
-            });
-        }
-
-        // Check if transaction ID already exists
-        const existingOrder = await Order.findOne({ transactionId: transactionId.trim() });
-        if (existingOrder) {
-            return res.status(400).json({
-                success: false,
-                error: 'Transaction ID already used. Please use a unique transaction ID.',
-            });
-        }
-
+        
+        
         let totalAmount = 0;
         const validatedRegistrations = [];
 
@@ -192,11 +177,32 @@ export const createOrder = async (req: Request, res: Response) => {
             });
         }
 
+        // ========== TRANSACTION ID VALIDATION ==========
+        const trimmedTransactionId = transactionId ? transactionId.trim() : undefined;
+
+        if (totalAmount > 0) {
+            if (!trimmedTransactionId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Transaction ID is required for paid orders',
+                });
+            }
+
+            // Check if transaction ID already exists (only for paid orders)
+            const existingOrder = await Order.findOne({ transactionId: trimmedTransactionId });
+            if (existingOrder) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Transaction ID already used. Please use a unique transaction ID.',
+                });
+            }
+        }
+
         // ========== CREATE ORDER ==========
         const order = new Order({
             userId: req.user._id,
             registrations: validatedRegistrations,
-            transactionId: transactionId.trim(),
+            transactionId: trimmedTransactionId, // Will be undefined if not provided (sparse index handles this)
             totalAmount,
             status: 'PENDING',
         });
@@ -221,7 +227,7 @@ export const createOrder = async (req: Request, res: Response) => {
                 order.orderId,
                 emailEvents,
                 totalAmount,
-                transactionId.trim()
+                trimmedTransactionId || 'FREE' // Pass 'FREE' or similar if no transaction ID
             );
         } catch (emailError: any) {
             logger.error(`❌ Failed to send order created email: ${emailError.message}`);

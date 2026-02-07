@@ -121,7 +121,7 @@ export const createEvent = async (req: Request, res: Response) => {
         logger.info(`👑 Admin ${req.user.email} creating event: ${eventData.name}`);
 
         // Validation
-        if (!eventData.name || !eventData.fees || !eventData.category) {
+        if (!eventData.name || eventData.fees === undefined || eventData.fees === null || !eventData.category) {
             return res.status(400).json({
                 success: false,
                 error: 'Name, fees, and category are required',

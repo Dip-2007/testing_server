@@ -18,6 +18,7 @@ export const getAllEvents = async (req: Request, res: Response) => {
         const query: any = {};
 
         // Filter by active status (default to true)
+        // Filter by active status (default to true)
         if (isActive !== undefined) {
             query.isActive = isActive === 'true';
         } else {

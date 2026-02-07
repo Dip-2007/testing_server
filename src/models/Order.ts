@@ -79,9 +79,12 @@ const orderSchema = new Schema<IOrder>(
         },
         transactionId: {
             type: String,
-            required: true,
+            required: function (this: IOrder) {
+                return this.totalAmount > 0;
+            },
             unique: true,
             index: true,
+            sparse: true, // Allow multiple null/undefined values
             trim: true,
         },
         totalAmount: {
