@@ -69,6 +69,8 @@ export const getAllEvents = async (req: Request, res: Response) => {
                 : [],
             createdAt: event.createdAt,
             updatedAt: event.updatedAt,
+            maxCap: event.maxCap,
+            registeredCount: event.registeredCount,
         });
 
         // Group events by category

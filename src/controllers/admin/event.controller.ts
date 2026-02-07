@@ -142,6 +142,18 @@ export const createEvent = async (req: Request, res: Response) => {
             });
         }
 
+        if (eventData.maxCap !== undefined && eventData.maxCap < 0) {
+             return res.status(400).json({
+                success: false,
+                error: 'Max capacity cannot be negative',
+            });
+        }
+        
+        // Default maxCap to 30 if not provided
+        if (eventData.maxCap === undefined) {
+            eventData.maxCap = 30;
+        }
+
         // Check if event name already exists
         const existingEvent = await Event.findOne({ name: eventData.name });
         if (existingEvent) {
@@ -230,6 +242,13 @@ export const updateEvent = async (req: Request, res: Response) => {
                     error: 'Min team size cannot be greater than max',
                 });
             }
+        }
+
+        if (updates.maxCap !== undefined && updates.maxCap < 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Max capacity cannot be negative',
+            });
         }
 
         // Update fields

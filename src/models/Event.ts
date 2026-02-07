@@ -68,6 +68,9 @@ export interface IEvent extends Document {
     isHackathon?: boolean;
     domains?: IDomain[];
 
+    maxCap?: number;
+    registeredCount: number;
+
     createdAt: Date;
     updatedAt: Date;
 }
@@ -190,6 +193,9 @@ const eventSchema = new Schema<IEvent>(
             type: [domainSchema],
             default: [],
         },
+
+        maxCap: { type: Number, default: 50 }, // Default cap 50
+        registeredCount: { type: Number, default: 0 },
     },
     { timestamps: true }
 );

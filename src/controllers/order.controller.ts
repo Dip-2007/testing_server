@@ -5,7 +5,7 @@ import Event from '../models/Event';
 import User from '../models/User';
 import logger from '../config/logger';
 import mongoose from 'mongoose';
-import { sendOrderCreatedEmail } from '../services/emailService';
+import { sendOrderCreatedEmail, sendOrderVerifiedEmail } from '../services/emailService';
 
 /**
  * @desc    Create new order (register for events)
@@ -167,6 +167,15 @@ export const createOrder = async (req: Request, res: Response) => {
                 }
             }
 
+            // ========== MAX CAP VALIDATION ==========
+            // Check if event has reached maximum capacity
+            if (event.maxCap && event.registeredCount >= event.maxCap) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Event "${event.name}" is full (Max capacity: ${event.maxCap})`,
+                });
+            }
+
             totalAmount += event.fees;
 
             validatedRegistrations.push({
@@ -177,8 +186,10 @@ export const createOrder = async (req: Request, res: Response) => {
             });
         }
 
-        // ========== TRANSACTION ID VALIDATION ==========
+        // ========== TRANSACTION ID VALIDATION & STATUS ==========
         const trimmedTransactionId = transactionId ? transactionId.trim() : undefined;
+        let orderStatus = 'PENDING';
+        let verifiedAt = undefined;
 
         if (totalAmount > 0) {
             if (!trimmedTransactionId) {
@@ -196,6 +207,10 @@ export const createOrder = async (req: Request, res: Response) => {
                     error: 'Transaction ID already used. Please use a unique transaction ID.',
                 });
             }
+        } else {
+            // Auto-verify if total amount is 0
+            orderStatus = 'VERIFIED';
+            verifiedAt = new Date();
         }
 
         // ========== CREATE ORDER ==========
@@ -204,31 +219,53 @@ export const createOrder = async (req: Request, res: Response) => {
             registrations: validatedRegistrations,
             transactionId: trimmedTransactionId, // Will be undefined if not provided (sparse index handles this)
             totalAmount,
-            status: 'PENDING',
+            status: orderStatus,
+            verifiedAt: verifiedAt,
         });
 
         await order.save();
+
+        // Update registered count for all events in the order
+        for (const reg of validatedRegistrations) {
+            await Event.findByIdAndUpdate(reg.eventId, { $inc: { registeredCount: 1 } });
+        }
 
         logger.info(`✅ Order created: ${order.orderId} by ${req.user.email}, Amount: ₹${totalAmount}`);
 
         // Send order created email to user
         try {
             // Get event names for email
+            // Get event names for email
             const eventIds = validatedRegistrations.map((reg) => reg.eventId);
-            const eventsForEmail = await Event.find({ _id: { $in: eventIds } }).select('name fees').lean();
+            const eventsForEmail = await Event.find({ _id: { $in: eventIds } }).select('name fees venue links').lean(); // Added venue and links
 
-            const emailEvents = eventsForEmail.map((event: any) => ({
-                name: event.name,
-                fees: event.fees,
-            }));
+            if (totalAmount === 0) {
+                // For free events, send verify email
+                await sendOrderVerifiedEmail(
+                    req.user,
+                    order.orderId,
+                    eventsForEmail.map((event: any) => ({
+                        name: event.name,
+                        venue: event.venue,
+                        links: event.links,
+                        // eventDate currently not in root, might be in schedule
+                    }))
+                );
+            } else {
+                // For paid events, send created email
+                const emailEvents = eventsForEmail.map((event: any) => ({
+                    name: event.name,
+                    fees: event.fees,
+                }));
 
-            await sendOrderCreatedEmail(
-                req.user,
-                order.orderId,
-                emailEvents,
-                totalAmount,
-                trimmedTransactionId || 'FREE' // Pass 'FREE' or similar if no transaction ID
-            );
+                await sendOrderCreatedEmail(
+                    req.user,
+                    order.orderId,
+                    emailEvents,
+                    totalAmount,
+                    trimmedTransactionId || 'FREE' 
+                );
+            }
         } catch (emailError: any) {
             logger.error(`❌ Failed to send order created email: ${emailError.message}`);
             // Don't fail the request if email fails
@@ -236,7 +273,9 @@ export const createOrder = async (req: Request, res: Response) => {
 
         res.status(201).json({
             success: true,
-            message: 'Order created successfully. Please wait for admin verification.',
+            message: totalAmount === 0 
+                ? 'Order created and verified successfully!' 
+                : 'Order created successfully. Please wait for admin verification.',
             order: {
                 orderId: order.orderId,
                 totalAmount: order.totalAmount,
