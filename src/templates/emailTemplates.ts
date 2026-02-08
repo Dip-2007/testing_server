@@ -343,7 +343,7 @@ export const orderVerifiedTemplate = (data: OrderVerifiedData): string => {
     <div class="container">
         <div class="email-wrapper">
             <div class="header" style="background: #065f46;">
-                <h1>Payment Verified</h1>
+                <h1>Congratulations!</h1>
                 <p>Your registration is confirmed!</p>
             </div>
             <div class="content">
