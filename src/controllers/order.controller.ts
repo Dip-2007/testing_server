@@ -169,12 +169,12 @@ export const createOrder = async (req: Request, res: Response) => {
 
             // ========== MAX CAP VALIDATION ==========
             // Check if event has reached maximum capacity
-            if (event.maxCap && event.registeredCount >= event.maxCap) {
-                return res.status(400).json({
-                    success: false,
-                    error: `Event "${event.name}" is full (Max capacity: ${event.maxCap})`,
-                });
-            }
+            // if (event.maxCap && event.registeredCount >= event.maxCap) {
+            //     return res.status(400).json({
+            //         success: false,
+            //         error: `Event "${event.name}" is full (Max capacity: ${event.maxCap})`,
+            //     });
+            // }
 
             totalAmount += event.fees;
 
